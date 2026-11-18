@@ -46,7 +46,7 @@ A desktop hotel management application built with **Java (JavaFX)**, **Hibernate
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 src/main/java/com/hotel/
