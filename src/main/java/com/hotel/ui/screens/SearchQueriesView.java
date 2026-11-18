@@ -10,8 +10,14 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class SearchQueriesView {
 
@@ -119,6 +125,62 @@ public class SearchQueriesView {
         resultsTable.setItems(tableRows);
         resultsTable.setPrefHeight(310);
         resultsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        q1btn.setOnAction(e -> {
+            LocalDate from = fromPicker.getValue();
+            LocalDate to = toPicker.getValue();
+            String status = statusBox.getValue();
+
+            try(Session session = sessionFactory.openSession()) {
+                StringBuilder sql = new StringBuilder("SELECT DISTINCT r FROM Reservation r LEFT JOIN FETCH r.services WHERE 1=1 ");//query όπου φέρνει κρατήσεις μαζί με τις υπηρεσίες τους
+                if(from !=null){
+                    sql.append(" AND r.checkInDate >= :fromDate ");
+                }
+                if(to !=null){
+                    sql.append(" AND r.checkInDate <= :toDate ");
+                }
+                if(!"Όλες".equals(status)){
+                    sql.append(" AND r.status = :status ");
+                }
+                else{
+                    sql.append(" ORDER BY r.checkInDate ASC");
+                }
+
+                var query = session.createQuery(sql.toString(), Reservation.class);
+                if(from!=null){
+                    query.setParameter("fromDate",from);
+                }
+                if(to!=null){
+                    query.setParameter("toDate",to);
+                }
+                if(!"Όλες".equals(status)){
+                    query.setParameter("status",status);
+                }
+                List<Reservation> results = query.list();//εκτέλεση query και παίρνει σαν αποτέλεσμα την λίστα κρατήσεων
+                setupColumns("ID", "Πελάτης", "Δωμάτιο", "Check-in", "Check-out", "Υπηρεσίες", "Σύνολο (€)", "Κατάσταση"); // Ορίζει τις 8 στήλες στον πίνακα
+                List<String[]> rows = new ArrayList<>(); // Προσωρινή λίστα για τις νέες γραμμές του πίνακα
+                BigDecimal sum = BigDecimal.ZERO; // Μετρητής συνολικών εσόδων περιόδου
+                for (Reservation r : results) { // Διατρέχει κάθε κράτηση που βρέθηκε
+                    String srv = (r.getServices() == null || r.getServices().isEmpty()) ? "Καμία"
+                            : r.getServices().stream().map(Service::getServiceName).collect(Collectors.joining(", "));
+                    rows.add(new String[]{
+                            String.valueOf(r.getReservationId()), // στήλη 0 με το ID κράτησης
+                            r.getCustomerId().getFirstName() + " " + r.getCustomerId().getLastName(), // στήλη 1 με το ονοματεπώνυμο πελάτη
+                            r.getRoomId().getRoomNumber() + " (" + r.getRoomId().getRoomType() + ")", // στήλη 2 αριθμός & τύπος δωματίου
+                            String.valueOf(r.getCheckInDate()), // στήλη 3 με την ημερομηνία άφιξης
+                            String.valueOf(r.getCheckOutDate()), // στήλη 4 με την ημερομηνία αναχώρησης
+                            srv, //στήλη 5 με τις έξτρα υπηρεσίες
+                            r.getTotalPrice() + " €", // στήλη 6 με την συνολική τιμή
+                            r.getStatus() // στήλη 7 κατάσταση κράτησης
+                    });
+                    if ("Confirmed".equalsIgnoreCase(r.getStatus())) {
+                        sum = sum.add(r.getTotalPrice()); //προσθέτει το ποσό της στα συνολικά έσοδα
+                    }
+                }
+                tableRows.setAll(rows);
+                summaryLabel.setText("Q1 Αποτελέσματα: " + rows.size() + " κρατήσεις | Ενεργά Έσοδα περιόδου: " + sum + " €"); // Εμφανίζει σύνοψη
+            }
+        });
 
         mainLayout.getChildren().addAll(title,queriesBox);
         ScrollPane scroll = new ScrollPane(mainLayout);

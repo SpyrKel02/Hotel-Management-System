@@ -61,7 +61,7 @@ public class BookingsListView {
 
         //πίνακας κρατήσεων
         TableColumn<Reservation, Integer> idCol = new TableColumn<>("ID");//στήλη με το ID της κράτησης
-        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
+        idCol.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
         idCol.setPrefWidth(55);
 
         TableColumn<Reservation, String> customerCol = new TableColumn<>("Ονοματεπώνυμο");//στήλη με το ονοματεπώνυμο του πελάτη

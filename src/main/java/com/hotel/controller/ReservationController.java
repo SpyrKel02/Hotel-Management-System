@@ -56,7 +56,7 @@ public class ReservationController {
                     .setParameter("firstName",customer.getFirstName().trim())
                     .setParameter("lastName",customer.getLastName().trim())
                     .setParameter("customerId",customer.getCustomerId()).uniqueResult();
-            if(activeReservation != null || activeReservation > 0){
+            if(activeReservation != null && activeReservation > 0){
                 System.out.println("[" + customer.getEmail() + "] Αποτυχία: Ο πελάτης (" + customer.getFirstName() + " " + customer.getLastName() + ") έχει ήδη ενεργή κράτηση!");
                 transaction.rollback();
                 return -2;

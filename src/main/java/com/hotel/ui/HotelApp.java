@@ -35,7 +35,7 @@ public class HotelApp extends Application {
     public void start(Stage primaryStage){
         //Σύνδεση με το database και γέμισμα αν είναι άδειο
         SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
-        //DatabaseFiller.fill(sessionFactory);
+        DatabaseFiller.fill(sessionFactory);
 
         this.roomDao = new RoomDao(sessionFactory);
         this.customerDao = new CustomerDao(sessionFactory);
