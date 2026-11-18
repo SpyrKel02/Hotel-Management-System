@@ -10,6 +10,7 @@ import com.hotel.model.database_filler.DatabaseFiller;
 import com.hotel.ui.screens.BookingView;
 import com.hotel.ui.screens.BookingsListView;
 import com.hotel.ui.screens.CustomerView;
+import com.hotel.ui.screens.SearchQueriesView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
@@ -33,17 +34,17 @@ public class HotelApp extends Application {
     @Override
     public void start(Stage primaryStage){
         //Σύνδεση με το database και γέμισμα αν είναι άδειο
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        DatabaseFiller.fill(factory);
+        SessionFactory sessionFactory = HibernateUtil.getSessionFactory();
+        //DatabaseFiller.fill(sessionFactory);
 
-        this.roomDao = new RoomDao(factory);
-        this.customerDao = new CustomerDao(factory);
-        this.serviceDao = new ServiceDao(factory);
-        this.reservationDao = new ReservationDao(factory);
-        this.reservationController = new ReservationController(factory,roomDao);
+        this.roomDao = new RoomDao(sessionFactory);
+        this.customerDao = new CustomerDao(sessionFactory);
+        this.serviceDao = new ServiceDao(sessionFactory);
+        this.reservationDao = new ReservationDao(sessionFactory);
+        this.reservationController = new ReservationController(sessionFactory,roomDao);
 
         mainLayout = new BorderPane();
-        mainLayout.setLeft(sideMenu());
+        mainLayout.setLeft(sideMenu(sessionFactory));
         mainLayout.setCenter(placeholder("Καλώς ήρθατε στο Hotel Management System!"));
 
         Scene scene = new Scene(mainLayout, 1180, 740);
@@ -54,7 +55,7 @@ public class HotelApp extends Application {
         primaryStage.requestFocus();
     }
 
-    private VBox sideMenu() {
+    private VBox sideMenu(SessionFactory sessionFactory) {
         VBox menu = new VBox(12);
         menu.setPadding(new Insets(20, 15, 20, 15));
         menu.setPrefWidth(230);
@@ -81,7 +82,11 @@ public class HotelApp extends Application {
             BookingsListView view = new BookingsListView(reservationDao, reservationController);
             mainLayout.setCenter(view.getView());
         });
-        btnSearch.setOnAction(event -> mainLayout.setCenter(placeholder("Αναζήτηση & Στατιστικά")));
+        btnSearch.setOnAction(event -> {
+            mainLayout.setCenter(placeholder("Αναζήτηση & Στατιστικά"));
+            SearchQueriesView view = new SearchQueriesView(sessionFactory);
+            mainLayout.setCenter(view.getView());
+        });
         btnCustomers.setOnAction(event -> {
             mainLayout.setCenter(placeholder("Πελάτες"));
             CustomerView view = new CustomerView(customerDao, reservationDao);
