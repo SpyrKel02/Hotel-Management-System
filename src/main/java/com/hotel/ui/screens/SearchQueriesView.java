@@ -126,24 +126,25 @@ public class SearchQueriesView {
         resultsTable.setPrefHeight(310);
         resultsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
+        //εκτέλεση δυναμικού query 1
         q1btn.setOnAction(e -> {
             LocalDate from = fromPicker.getValue();
             LocalDate to = toPicker.getValue();
             String status = statusBox.getValue();
 
             try (Session session = sessionFactory.openSession()) {
-                StringBuilder hql = new StringBuilder(
+                StringBuilder sql = new StringBuilder(
                         "SELECT DISTINCT r FROM Reservation r LEFT JOIN FETCH r.services WHERE 1=1 "
                 );
-                if (from != null) hql.append(" AND r.checkInDate >= :fromDate ");
-                if (to != null) hql.append(" AND r.checkOutDate <= :toDate ");
-                if (!"Όλες".equals(status)) hql.append(" AND r.status = :status ");
-                hql.append(" ORDER BY r.checkInDate ASC");
+                if (from != null) sql.append(" AND r.checkInDate >= :fromDate ");
+                if (to != null) sql.append(" AND r.checkOutDate <= :toDate ");
+                if (!"Όλες".equals(status)) sql.append(" AND r.status = :status ");
+                sql.append(" ORDER BY r.checkInDate ASC");
 
-                System.out.println("DEBUG Q1 HQL: " + hql);
+                System.out.println("DEBUG Q1 HQL: " + sql);
                 System.out.println("DEBUG Q1 Params -> from: " + from + ", to: " + to + ", status: " + status);
 
-                var query = session.createQuery(hql.toString(), Reservation.class);
+                var query = session.createQuery(sql.toString(), Reservation.class);
                 if (from != null) query.setParameter("fromDate", from);
                 if (to != null) query.setParameter("toDate", to);
                 if (!"Όλες".equals(status)) query.setParameter("status", status);
@@ -173,10 +174,43 @@ public class SearchQueriesView {
                     }
                 }
                 tableRows.setAll(rows);
-                summaryLabel.setText("Q1 Αποτελέσματα: " + rows.size() + " κρατήσεις | Ενεργά Έσοδα περιόδου: " + sum + " €");
+                summaryLabel.setText("Αποτελέσματα: " + rows.size() + " κρατήσεις | Ενεργά Έσοδα περιόδου: " + sum + " €");
             } catch (Exception ex) {
                 ex.printStackTrace();
-                summaryLabel.setText("Σφάλμα Q1: " + ex.getMessage());
+                summaryLabel.setText("Σφάλμα: " + ex.getMessage());
+            }
+        });
+
+        q2btn.setOnAction(event ->{
+            String selectedType = roomTypeBox.getValue();
+            try(Session session = sessionFactory.openSession()){
+                String sql = "SELECT r.room.roomType, COUNT(r), SUM(r.totalPrice), AVG(r.totalPrice) "+
+                        " FROM Reservation r WHERE r.status = 'Confirmed' "+
+                        ("Όλοι οι τύποι".equals(selectedType) ? "" : "AND LOWER(r.room.roomType) LIKE LOWER(:rType) ") +
+                        "GROUP BY r.room.roomType ORDER BY SUM(r.totalPrice) DESC";
+                var query = session.createQuery(sql, Object[].class);
+                if(!"Όλοι οι τύποι".equals(selectedType)){
+                    query.setParameter("rType", "%" + selectedType + "%");
+                }
+
+                List<Object[]> results = query.list(); // εκτελεί το query και παίρνει τα ομαδοποιημένα αποτελέσματα
+                setupColumns("Τύπος Δωματίου", "Πλήθος Ενεργών Κρατήσεων", "Συνολικά Έσοδα (€)", "Μέση Αξία Κράτησης (€)");
+
+                List<String[]> rows = new ArrayList<>(); // λίστα για τις γραμμές αποτελεσμάτων
+                for (Object[] row : results) {
+                    double avg = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0; // μετατρέπει τον μέσο όρο (4η στήλη) σε double
+                    rows.add(new String[]{ // Δημιουργεί τη γραμμή κειμένου για το TableView
+                            String.valueOf(row[0]), // στήλη 0 τύπος δωματίου
+                            String.valueOf(row[1]), // στήλη 1 πλήθος κρατήσεων (COUNT)
+                            row[2] + " €", // στήλη 2 συνολικά έσοδα (SUM)
+                            String.format("%.2f €", avg) // Στήλη 3: Μέση αξία με 2 δεκαδικά (AVG)
+                    });
+                }
+                tableRows.setAll(rows); // Ενημερώνει τον πίνακα UI
+                summaryLabel.setText("Στατιστικά ανά Τύπο Δωματίου (" + selectedType + "): " + rows.size() + " κατηγορίες"); // Ενημερώνει τη σύνοψη
+            }catch(Exception ex){
+                ex.printStackTrace();
+                summaryLabel.setText("Σφάλμα: " + ex.getMessage());
             }
         });
 
