@@ -39,7 +39,7 @@ public class CustomerView {
 
         //πίνακας πελατών
         TableColumn<Customer, Integer> idCol = new TableColumn<>("ID");//στήλη 1 με το ID του πελάτη
-        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
+        idCol.setCellValueFactory(new PropertyValueFactory<>("customerId"));
         idCol.setPrefWidth(60);
 
         TableColumn<Customer, String> fNameCol = new TableColumn<>("Όνομα");//στήλη 2 με το όνομα του πελάτη

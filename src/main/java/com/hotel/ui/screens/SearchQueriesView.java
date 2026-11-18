@@ -131,58 +131,56 @@ public class SearchQueriesView {
             LocalDate to = toPicker.getValue();
             String status = statusBox.getValue();
 
-            try(Session session = sessionFactory.openSession()) {
-                StringBuilder sql = new StringBuilder("SELECT DISTINCT r FROM Reservation r LEFT JOIN FETCH r.services WHERE 1=1 ");//query όπου φέρνει κρατήσεις μαζί με τις υπηρεσίες τους
-                if(from !=null){
-                    sql.append(" AND r.checkInDate >= :fromDate ");
-                }
-                if(to !=null){
-                    sql.append(" AND r.checkInDate <= :toDate ");
-                }
-                if(!"Όλες".equals(status)){
-                    sql.append(" AND r.status = :status ");
-                }
-                else{
-                    sql.append(" ORDER BY r.checkInDate ASC");
-                }
+            try (Session session = sessionFactory.openSession()) {
+                StringBuilder hql = new StringBuilder(
+                        "SELECT DISTINCT r FROM Reservation r LEFT JOIN FETCH r.services WHERE 1=1 "
+                );
+                if (from != null) hql.append(" AND r.checkInDate >= :fromDate ");
+                if (to != null) hql.append(" AND r.checkOutDate <= :toDate ");
+                if (!"Όλες".equals(status)) hql.append(" AND r.status = :status ");
+                hql.append(" ORDER BY r.checkInDate ASC");
 
-                var query = session.createQuery(sql.toString(), Reservation.class);
-                if(from!=null){
-                    query.setParameter("fromDate",from);
-                }
-                if(to!=null){
-                    query.setParameter("toDate",to);
-                }
-                if(!"Όλες".equals(status)){
-                    query.setParameter("status",status);
-                }
-                List<Reservation> results = query.list();//εκτέλεση query και παίρνει σαν αποτέλεσμα την λίστα κρατήσεων
-                setupColumns("ID", "Πελάτης", "Δωμάτιο", "Check-in", "Check-out", "Υπηρεσίες", "Σύνολο (€)", "Κατάσταση"); // Ορίζει τις 8 στήλες στον πίνακα
-                List<String[]> rows = new ArrayList<>(); // Προσωρινή λίστα για τις νέες γραμμές του πίνακα
-                BigDecimal sum = BigDecimal.ZERO; // Μετρητής συνολικών εσόδων περιόδου
-                for (Reservation r : results) { // Διατρέχει κάθε κράτηση που βρέθηκε
+                System.out.println("DEBUG Q1 HQL: " + hql);
+                System.out.println("DEBUG Q1 Params -> from: " + from + ", to: " + to + ", status: " + status);
+
+                var query = session.createQuery(hql.toString(), Reservation.class);
+                if (from != null) query.setParameter("fromDate", from);
+                if (to != null) query.setParameter("toDate", to);
+                if (!"Όλες".equals(status)) query.setParameter("status", status);
+
+                List<Reservation> results = query.list();
+                System.out.println("DEBUG Q1 Results count: " + results.size());
+
+                setupColumns("ID", "Πελάτης", "Δωμάτιο", "Check-in", "Check-out", "Υπηρεσίες", "Σύνολο (€)", "Κατάσταση");
+
+                List<String[]> rows = new ArrayList<>();
+                BigDecimal sum = BigDecimal.ZERO;
+                for (Reservation r : results) {
                     String srv = (r.getServices() == null || r.getServices().isEmpty()) ? "Καμία"
                             : r.getServices().stream().map(Service::getServiceName).collect(Collectors.joining(", "));
                     rows.add(new String[]{
-                            String.valueOf(r.getReservationId()), // στήλη 0 με το ID κράτησης
-                            r.getCustomerId().getFirstName() + " " + r.getCustomerId().getLastName(), // στήλη 1 με το ονοματεπώνυμο πελάτη
-                            r.getRoomId().getRoomNumber() + " (" + r.getRoomId().getRoomType() + ")", // στήλη 2 αριθμός & τύπος δωματίου
-                            String.valueOf(r.getCheckInDate()), // στήλη 3 με την ημερομηνία άφιξης
-                            String.valueOf(r.getCheckOutDate()), // στήλη 4 με την ημερομηνία αναχώρησης
-                            srv, //στήλη 5 με τις έξτρα υπηρεσίες
-                            r.getTotalPrice() + " €", // στήλη 6 με την συνολική τιμή
-                            r.getStatus() // στήλη 7 κατάσταση κράτησης
+                            String.valueOf(r.getReservationId()),
+                            r.getCustomerId().getFirstName() + " " + r.getCustomerId().getLastName(),
+                            r.getRoomId().getRoomNumber() + " (" + r.getRoomId().getRoomType() + ")",
+                            String.valueOf(r.getCheckInDate()),
+                            String.valueOf(r.getCheckOutDate()),
+                            srv,
+                            r.getTotalPrice() + " €",
+                            r.getStatus()
                     });
                     if ("Confirmed".equalsIgnoreCase(r.getStatus())) {
-                        sum = sum.add(r.getTotalPrice()); //προσθέτει το ποσό της στα συνολικά έσοδα
+                        sum = sum.add(r.getTotalPrice());
                     }
                 }
                 tableRows.setAll(rows);
-                summaryLabel.setText("Q1 Αποτελέσματα: " + rows.size() + " κρατήσεις | Ενεργά Έσοδα περιόδου: " + sum + " €"); // Εμφανίζει σύνοψη
+                summaryLabel.setText("Q1 Αποτελέσματα: " + rows.size() + " κρατήσεις | Ενεργά Έσοδα περιόδου: " + sum + " €");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                summaryLabel.setText("Σφάλμα Q1: " + ex.getMessage());
             }
         });
 
-        mainLayout.getChildren().addAll(title,queriesBox);
+        mainLayout.getChildren().addAll(title,queriesBox, summaryLabel, resultsTable);
         ScrollPane scroll = new ScrollPane(mainLayout);
         scroll.setFitToWidth(true);
         return scroll;
@@ -196,7 +194,11 @@ public class SearchQueriesView {
     }
 
     public void setupColumns(String... columns){//μέθοδος που χτίζει τις στήλες του πίνακα
-        resultsTable.getColumns().clear();//διαγραφή των προηγούμενων στηλών του πίνακα
+        resultsTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        resultsTable.getColumns().clear();
+
+        double tableWidth = resultsTable.getWidth() > 0 ? resultsTable.getWidth() - 20 : 880;
+        double equalWidth = Math.max(120, tableWidth / columns.length);
         for(int i = 0; i < columns.length; i++){
             final int colIndex = i;
             TableColumn<String[], String> column = new TableColumn<>(columns[colIndex]);
@@ -204,6 +206,13 @@ public class SearchQueriesView {
                 String[] row = cell.getValue();
                 return new SimpleStringProperty(colIndex < row.length ? row[colIndex] : "");
             });
+            if ("ID".equalsIgnoreCase(columns[i])) {
+                column.setPrefWidth(65);
+                column.setMinWidth(55);
+            } else {
+                column.setPrefWidth(equalWidth);
+                column.setMinWidth(115);
+            }
             resultsTable.getColumns().add(column);
         }
     }
