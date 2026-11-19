@@ -128,7 +128,7 @@ public class BookingView {
         VBox servicesBox = new VBox(8);
         List<Service> services = serviceDao.findAllServices();
         for(Service s:services){
-            CheckBox checkBox = new CheckBox(s.getServiceName()+" (+"+s.getServicePrice()+"€");
+            CheckBox checkBox = new CheckBox(s.getServiceName()+" (+"+s.getServicePrice()+"€)");
             checkBox.setStyle("-fx-font-size: 13px");
             checkBox.setOnAction(event -> updateEstimatedPrice());
             servicesCheckBoxes.put(checkBox,s);

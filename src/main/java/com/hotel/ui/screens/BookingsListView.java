@@ -50,6 +50,7 @@ public class BookingsListView {
                 FXCollections.observableArrayList("Όλες","Confirmed","Cancelled")
         );
         statusComboBox.setValue("Όλες");
+        statusComboBox.setStyle(SearchQueriesView.modernComboBoxStyle());
 
         Button searchBtn = new Button("Αναζήτηση");
         searchBtn.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 7 15; -fx-cursor: hand;");
