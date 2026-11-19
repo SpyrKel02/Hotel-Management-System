@@ -1,16 +1,10 @@
 package com.hotel.ui;
 
 import com.hotel.controller.ReservationController;
-import com.hotel.model.dao.CustomerDao;
-import com.hotel.model.dao.ReservationDao;
-import com.hotel.model.dao.RoomDao;
-import com.hotel.model.dao.ServiceDao;
+import com.hotel.model.dao.*;
 import com.hotel.model.database_connection.HibernateUtil;
 import com.hotel.model.database_filler.DatabaseFiller;
-import com.hotel.ui.screens.BookingView;
-import com.hotel.ui.screens.BookingsListView;
-import com.hotel.ui.screens.CustomerView;
-import com.hotel.ui.screens.SearchQueriesView;
+import com.hotel.ui.screens.*;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
@@ -30,6 +24,7 @@ public class HotelApp extends Application {
     private CustomerDao customerDao;
     private ReservationDao reservationDao;
     private ReservationController reservationController;
+    private DashboardDao dashboardDao;
 
     @Override
     public void start(Stage primaryStage){
@@ -42,10 +37,11 @@ public class HotelApp extends Application {
         this.serviceDao = new ServiceDao(sessionFactory);
         this.reservationDao = new ReservationDao(sessionFactory);
         this.reservationController = new ReservationController(sessionFactory,roomDao);
+        this.dashboardDao = new DashboardDao(sessionFactory);
 
         mainLayout = new BorderPane();
         mainLayout.setLeft(sideMenu(sessionFactory));
-        mainLayout.setCenter(placeholder("Καλώς ήρθατε στο Hotel Management System!"));
+        mainLayout.setCenter(new DashboardView(dashboardDao).getView());
 
         Scene scene = new Scene(mainLayout, 1180, 740);
         primaryStage.setTitle("Hotel Management System");
@@ -65,6 +61,7 @@ public class HotelApp extends Application {
         brandLabel.setStyle("-fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-padding: 0 0 20 0;");
 
         //αρχικοποίηση κουμπιών στο Menu
+        Button btnDashboard = MenuButton("Επισκόπηση");
         Button btnBooking = MenuButton("Κάνε Κράτηση");
         Button btnBookingsList = MenuButton("Κρατήσεις");
         Button btnSearch = MenuButton("Αναζήτηση & Στατιστικά");
@@ -72,29 +69,29 @@ public class HotelApp extends Application {
         Button btnLogs = MenuButton("Καταγραφή Ενεργειών");
 
         //ενέργειες κουμπιών
+        btnDashboard.setOnAction(event -> {
+            DashboardView view = new DashboardView(dashboardDao);
+            mainLayout.setCenter(view.getView());
+        });
         btnBooking.setOnAction(event -> {
-            mainLayout.setCenter(placeholder("Κάνε Κράτηση"));
             BookingView view = new BookingView(roomDao, customerDao, serviceDao, reservationController);
             mainLayout.setCenter(view.getView());
         });
         btnBookingsList.setOnAction(event -> {
-            mainLayout.setCenter(placeholder("Λίστα Κρατήσεων"));
             BookingsListView view = new BookingsListView(reservationDao, reservationController);
             mainLayout.setCenter(view.getView());
         });
         btnSearch.setOnAction(event -> {
-            mainLayout.setCenter(placeholder("Αναζήτηση & Στατιστικά"));
             SearchQueriesView view = new SearchQueriesView(sessionFactory);
             mainLayout.setCenter(view.getView());
         });
         btnCustomers.setOnAction(event -> {
-            mainLayout.setCenter(placeholder("Πελάτες"));
             CustomerView view = new CustomerView(customerDao, reservationDao);
            mainLayout.setCenter(view.getView());
         });
         btnLogs.setOnAction(event -> mainLayout.setCenter(placeholder("Καταγραφή Ενεργειών")));
 
-        menu.getChildren().addAll(brandLabel, btnBooking, btnBookingsList, btnSearch, btnCustomers, btnLogs);
+        menu.getChildren().addAll(brandLabel,btnDashboard,btnBooking, btnBookingsList, btnSearch, btnCustomers, btnLogs);
 
         return menu;
     }
